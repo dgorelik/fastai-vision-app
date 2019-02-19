@@ -8,10 +8,10 @@ from io import BytesIO
 from fastai import *
 from fastai.vision import *
 
-from google.auth import app_engine
 from google.cloud import storage
 
-model_file_name = 'model'
+model_file_name = 'export.pkl'
+bucket_name = 'dg-storage-bucket'
 classes = ['amtrak train', 'british train']
 path = Path(__file__).parent
 
@@ -19,16 +19,20 @@ app = Starlette()
 app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_headers=['X-Requested-With', 'Content-Type'])
 app.mount('/static', StaticFiles(directory='app/static'))
 
+def set_credentials():
+    import os
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=str(path/"gcp_cred.json")
+
 async def download_file(dest):
     if dest.exists(): return
-    credentials = app_engine.Credentials()
-    async with storage.Client(credentials = credentials) as storage_client:
-        bucket = storage_client.get_bucket('dg-storage-bucket')
-        blob = bucket.blob('export.pkl')
-        blob.download_to_filename(dest)
+    set_credentials()
+    storage_client =  storage.Client()
+    bucket = storage_client.get_bucket(bucket_name)
+    blob = bucket.blob(model_file_name)
+    blob.download_to_filename(str(dest))
 
 async def setup_learner():
-    await download_file(path/'models'/f'{model_file_name}.pth')
+    await download_file(path/'models'/f'{model_file_name}')
     learn = load_learner(path/'models')
     return learn
 
