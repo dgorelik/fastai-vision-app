@@ -2,7 +2,7 @@ from starlette.applications import Starlette
 from starlette.responses import HTMLResponse, JSONResponse
 from starlette.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
-import uvicorn, aiohttp, asyncio
+import uvicorn, aiohttp, asyncio, os
 from io import BytesIO
 
 from fastai import *
@@ -20,7 +20,6 @@ app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_headers=['X-Reques
 app.mount('/static', StaticFiles(directory='app/static'))
 
 def set_credentials():
-    import os
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=str(path/"gcp_cred.json")
 
 async def download_file(dest):
@@ -29,6 +28,8 @@ async def download_file(dest):
     storage_client =  storage.Client()
     bucket = storage_client.get_bucket(bucket_name)
     blob = bucket.blob(model_file_name)
+
+    os.makedirs(os.path.dirname(str(dest)), exist_ok=True)
     blob.download_to_filename(str(dest))
 
 async def setup_learner():
